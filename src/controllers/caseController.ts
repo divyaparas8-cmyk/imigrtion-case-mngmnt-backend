@@ -78,15 +78,8 @@ export const getMyCase = async (req: AuthenticatedRequest, res: Response) => {
     });
 
     if (!client) {
-      // Fallback: return the first case in the system for demo purposes
-      const fallbackCase = await prisma.case.findFirst({
-        include: { client: true, documents: true, recommenders: true },
-        orderBy: { lastUpdated: 'desc' }
-      });
-      if (!fallbackCase) {
-        return res.status(404).json({ success: false, error: 'No case found' });
-      }
-      return res.json({ success: true, data: fallbackCase });
+      // If the client doesn't exist, they obviously have no case.
+      return res.json({ success: true, data: null });
     }
 
     // Find the most recent case for this client
@@ -97,43 +90,8 @@ export const getMyCase = async (req: AuthenticatedRequest, res: Response) => {
     });
 
     if (!myCase) {
-      // Auto-create an active demo case if none exists in the system so portal never returns 404
-      let targetClient = client;
-      if (!targetClient) {
-        targetClient = await prisma.client.create({
-          data: {
-            name: userEmail.split('@')[0] || 'Client Candidate',
-            email: userEmail,
-            phone: '+1 (555) 012-3456',
-            countryOfBirth: 'Not Specified',
-            currentField: 'Immigration Petition',
-            highestDegree: "Master's",
-            university: 'Not Specified',
-            status: 'Active'
-          }
-        });
-      }
-
-      const caseNum = `NIW-2026-${Math.floor(100 + Math.random() * 900)}`;
-      myCase = await prisma.case.create({
-        data: {
-          caseNumber: caseNum,
-          clientId: targetClient.id,
-          petitionCategory: 'EB-2 NIW',
-          fieldCategory: 'Immigration Petition',
-          currentStage: 1,
-          assignedWriter: 'Petition Drafter 1',
-          assignedReviewer: 'Senior Reviewer',
-          riskLevel: 'low',
-          targetFilingDate: '2026-12-31',
-          uscisServiceCenter: 'Nebraska (NSC)',
-          premiumProcessing: false,
-          title: 'EB-2 NIW Petition',
-          priority: 'Medium',
-          status: 'Active'
-        },
-        include: { client: true, documents: true, recommenders: true }
-      });
+      // If the client has no case, return null so the frontend can handle the empty state
+      return res.json({ success: true, data: null });
     }
 
     return res.json({ success: true, data: myCase });
