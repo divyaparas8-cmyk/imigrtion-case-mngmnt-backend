@@ -16,9 +16,12 @@ const createTaskSchema = z.object({
 const updateTaskSchema = z.object({
   completed: z.boolean().optional(),
   title: z.string().min(3).max(200).optional(),
+  assignedRole: z.enum(['superadmin', 'admin', 'writer', 'reviewer', 'client']).optional(),
   assignedToName: z.string().min(2).optional(),
+  stageId: z.number().int().min(1).max(14).optional(),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional()
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  caseId: z.string().optional()
 });
 
 export const getTasks = async (req: AuthenticatedRequest, res: Response) => {
@@ -95,6 +98,25 @@ export const updateTask = async (req: AuthenticatedRequest, res: Response) => {
     });
 
     return res.json({ success: true, data: updatedTask });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const deleteTask = async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const existingTask = await prisma.task.findUnique({ where: { id } });
+    if (!existingTask) {
+      return res.status(404).json({ success: false, error: 'Task not found' });
+    }
+
+    await prisma.task.delete({
+      where: { id }
+    });
+
+    return res.json({ success: true, message: 'Task deleted successfully' });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
