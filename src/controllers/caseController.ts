@@ -44,14 +44,21 @@ export const getCases = async (req: Request, res: Response) => {
     // Admins and Superadmins have full management visibility of all cases
     let filteredCases = cases;
     if (userRole && userRole !== 'superadmin' && userRole !== 'admin') {
+      let userName = '';
+      if (userEmail) {
+        const dbUser = await prisma.user.findUnique({ where: { email: userEmail } });
+        if (dbUser) userName = dbUser.name;
+      }
+
       filteredCases = cases.filter(c => {
         if (userRole === 'client') {
           return (c.client?.email && userEmail ? c.client.email.toLowerCase() === userEmail.toLowerCase() : false) || cases.length > 0;
         }
         const notes = c.client?.notes || '';
         if (!c.assignedWriter && !c.assignedReviewer && !notes.includes('Created By:')) return true;
-        const writerMatch = c.assignedWriter && userEmail ? c.assignedWriter.toLowerCase().includes(userEmail.toLowerCase()) : false;
-        const reviewerMatch = c.assignedReviewer && userEmail ? c.assignedReviewer.toLowerCase().includes(userEmail.toLowerCase()) : false;
+        
+        const writerMatch = c.assignedWriter && userName ? c.assignedWriter.toLowerCase().includes(userName.toLowerCase()) : false;
+        const reviewerMatch = c.assignedReviewer && userName ? c.assignedReviewer.toLowerCase().includes(userName.toLowerCase()) : false;
         const creatorMatch = userEmail ? notes.includes(`Created By: ${userEmail}`) : false;
         return writerMatch || reviewerMatch || creatorMatch;
       });
