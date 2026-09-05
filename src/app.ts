@@ -102,7 +102,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   next(err);
 });
 
-import { prisma } from './config/db.js';
 
 // Main routers
 app.use('/api/auth', authRoutes);
