@@ -23,16 +23,21 @@ import { seed } from './config/seed.js';
 import { execSync } from 'child_process';
 
 // Auto-sync Prisma schema with database on startup
-try {
-  console.log('🔄 Auto-pushing Prisma schema to database...');
-  execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-  console.log('✅ Database schema synchronized.');
-} catch (err: any) {
-  console.warn('⚠️ Database schema push check skipped:', err.message || err);
-}
+// try {
+//   console.log('🔄 Auto-pushing Prisma schema to database...');
+//   execSync('npx prisma db push', { stdio: 'inherit' });
+//   console.log('✅ Database schema synchronized.');
+// } catch (err: any) {
+//   console.warn('⚠️ Database schema push check skipped:', err.message || err);
+// }
 
 // Auto-seed database if empty on startup
-seed().catch(err => console.warn('Database seeding check skipped:', err.message || err));
+import { prisma } from './config/db.js';
+prisma.case.count().then(count => {
+  if (count === 0) {
+    seed().catch(err => console.warn('Database seeding check skipped:', err.message || err));
+  }
+});
 
 const app = express();
 const port = process.env.PORT || 5000;
