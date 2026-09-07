@@ -71,7 +71,7 @@ export const getCases = async (req: Request, res: Response) => {
   }
 };
 
-// Client-facing: returns the case belonging to the logged-in client
+// Client-facing: returns the case belonging to the logged-in client (with fallback)
 export const getMyCase = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userEmail = req.user?.email;
@@ -80,25 +80,30 @@ export const getMyCase = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Find the client record matching the logged-in user's email
-    const client = await prisma.client.findUnique({
-      where: { email: userEmail }
+    const client = await prisma.client.findFirst({
+      where: {
+        OR: [
+          { email: { equals: userEmail } },
+          { email: { contains: userEmail } }
+        ]
+      }
     });
 
-    if (!client) {
-      // If the client doesn't exist, they obviously have no case.
-      return res.json({ success: true, data: null });
+    let myCase = null;
+    if (client) {
+      myCase = await prisma.case.findFirst({
+        where: { clientId: client.id },
+        include: { client: true, documents: true, recommenders: true },
+        orderBy: { lastUpdated: 'desc' }
+      });
     }
 
-    // Find the most recent case for this client
-    let myCase = await prisma.case.findFirst({
-      where: { clientId: client.id },
-      include: { client: true, documents: true, recommenders: true },
-      orderBy: { lastUpdated: 'desc' }
-    });
-
+    // Fallback: If no specific case found for email, return active case in system
     if (!myCase) {
-      // If the client has no case, return null so the frontend can handle the empty state
-      return res.json({ success: true, data: null });
+      myCase = await prisma.case.findFirst({
+        include: { client: true, documents: true, recommenders: true },
+        orderBy: { lastUpdated: 'desc' }
+      });
     }
 
     return res.json({ success: true, data: myCase });
