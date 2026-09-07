@@ -37,7 +37,7 @@ prisma.case.count().then(count => {
   if (count === 0) {
     seed().catch(err => console.warn('Database seeding check skipped:', err.message || err));
   }
-});
+}).catch(err => console.warn('Database startup check skipped:', err.message || err));
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -103,21 +103,48 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 
-// Main routers
+// Main routers (mounted with and without /api prefix for dual-compatibility)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/clients', clientRoutes);
+app.use('/clients', clientRoutes);
+
 app.use('/api/cases', caseRoutes);
+app.use('/cases', caseRoutes);
+
 app.use('/api/documents', docRoutes);
+app.use('/documents', docRoutes);
+
 app.use('/api/tasks', taskRoutes);
+app.use('/tasks', taskRoutes);
+
 app.use('/api/ai', aiRoutes);
+app.use('/ai', aiRoutes);
+
 app.use('/api/payments', paymentRoutes);
+app.use('/payments', paymentRoutes);
+
 app.use('/api/messages', messageRoutes);
+app.use('/messages', messageRoutes);
+
 app.use('/api/appointments', appointmentRoutes);
+app.use('/appointments', appointmentRoutes);
+
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/dashboard', dashboardRoutes);
+
 app.use('/api/templates', templateRoutes);
+app.use('/templates', templateRoutes);
+
 app.use('/api/settings', settingRoutes);
+app.use('/settings', settingRoutes);
+
 app.use('/api/reports', reportRoutes);
+app.use('/reports', reportRoutes);
+
 app.use('/api/users', userRoutes);
+app.use('/users', userRoutes);
 
 // Seed API endpoint for easy developer verification
 app.get('/api/seed', async (req, res) => {
