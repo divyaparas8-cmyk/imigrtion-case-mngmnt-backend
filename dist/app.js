@@ -35,6 +35,7 @@ const port = process.env.PORT || 5000;
 const allowedOrigins = [
     'https://casemanagementproject1.netlify.app',
     'https://casemanagementcode.netlify.app',
+    'https://thriving-sunburst-6e4b14.netlify.app',
     'http://localhost:5173',
     'http://localhost:3000',
     'http://localhost:5174',
@@ -75,6 +76,16 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
+// Custom middleware to catch JSON syntax errors from body-parser gracefully (400 instead of 500)
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && 'body' in err && err.status === 400) {
+        return res.status(400).json({
+            success: false,
+            error: 'Invalid JSON payload in request body. Ensure keys and strings are enclosed in valid double quotes.'
+        });
+    }
+    next(err);
+});
 import { prisma } from './config/db.js';
 // Main routers
 app.use('/api/auth', authRoutes);

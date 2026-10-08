@@ -3,6 +3,8 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 import authRoutes from './routes/authRoutes.js';
 import clientRoutes from './routes/clientRoutes.js';
 import caseRoutes from './routes/caseRoutes.js';
@@ -21,23 +23,8 @@ import reportRoutes from './routes/reportRoutes.js';
 // Seed API endpoint for easy developer verification
 import { seed } from './config/seed.js';
 import { execSync } from 'child_process';
-
-// Auto-sync Prisma schema with database on startup
-// try {
-//   console.log('🔄 Auto-pushing Prisma schema to database...');
-//   execSync('npx prisma db push', { stdio: 'inherit' });
-//   console.log('✅ Database schema synchronized.');
-// } catch (err: any) {
-//   console.warn('⚠️ Database schema push check skipped:', err.message || err);
-// }
-
-// Auto-seed database if empty on startup
-import { prisma } from './config/db.js';
-prisma.case.count().then(count => {
-  if (count === 0) {
-    seed().catch(err => console.warn('Database seeding check skipped:', err.message || err));
-  }
-}).catch(err => console.warn('Database startup check skipped:', err.message || err));
+// Safe initialization on startup (preserves existing data)
+seed(false).catch(err => console.warn('Database initialization warning:', err.message || err));
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -50,7 +37,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5174',
   'http://localhost:5000',
-  'http://localhost:5001'
+  'http://localhost:5001',
+  'http://localhost:5005'
 ];
 
 if (process.env.FRONTEND_URL) {
@@ -88,8 +76,15 @@ const corsOptions: cors.CorsOptions = {
   optionsSuccessStatus: 200
 };
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use('/uploads', express.static(uploadsDir));
 
 // Custom middleware to catch JSON syntax errors from body-parser gracefully (400 instead of 500)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -102,49 +97,23 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   next(err);
 });
 
+import { prisma } from './config/db.js';
 
-// Main routers (mounted with and without /api prefix for dual-compatibility)
+// Main routers
 app.use('/api/auth', authRoutes);
-app.use('/auth', authRoutes);
-
 app.use('/api/clients', clientRoutes);
-app.use('/clients', clientRoutes);
-
 app.use('/api/cases', caseRoutes);
-app.use('/cases', caseRoutes);
-
 app.use('/api/documents', docRoutes);
-app.use('/documents', docRoutes);
-
 app.use('/api/tasks', taskRoutes);
-app.use('/tasks', taskRoutes);
-
 app.use('/api/ai', aiRoutes);
-app.use('/ai', aiRoutes);
-
 app.use('/api/payments', paymentRoutes);
-app.use('/payments', paymentRoutes);
-
 app.use('/api/messages', messageRoutes);
-app.use('/messages', messageRoutes);
-
 app.use('/api/appointments', appointmentRoutes);
-app.use('/appointments', appointmentRoutes);
-
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/dashboard', dashboardRoutes);
-
 app.use('/api/templates', templateRoutes);
-app.use('/templates', templateRoutes);
-
 app.use('/api/settings', settingRoutes);
-app.use('/settings', settingRoutes);
-
 app.use('/api/reports', reportRoutes);
-app.use('/reports', reportRoutes);
-
 app.use('/api/users', userRoutes);
-app.use('/users', userRoutes);
 
 // Seed API endpoint for easy developer verification
 app.get('/api/seed', async (req, res) => {
